@@ -1,0 +1,38 @@
+FileFerry is a file transfer program written in straight C. It is released under the Gnu Public Licence V3 and thus comes with no guarentees or warranty.
+
+INSTALLATION should be as simple as:
+
+./configure --enable-ssl
+make
+
+This will produce a file called 'fileferry' that is the executable. You can then copy this to whereever your exectuables live.
+
+Fileferry currently supports transfering files over:
+
+FTP
+
+Ftp is supported with features like compression and file hashes/integrity checking if these are supported by the FTP server.
+
+HTTP/HTTPS
+
+HTTP is supported, including the parsing of RSS streams to enable downloading of all items on a podcast.
+
+SSH 
+
+This is NOT SFTP. In this mode fileferry will ssh and login to a host, and use commands like 'cat' to transfer files. Compression with gzip is supported for downloads only, and is somewhat experimental. File hashes/integrity checking will be supported if the remote host has md5sum or sha1sum.
+
+FILESANYWHERE
+
+The filesanywhere API is supported. 
+
+PICASA
+
+Google's Picasa webfolders is supported for the upload and download of IMAGES ONLY. Upload/Download of video is on the TODO list but presents some issues.
+
+GOOGLE SITES
+
+Support for uploading/downloading pages and attachements to googlesites is supported. 
+
+WEBDAV
+
+Support for 

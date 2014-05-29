@@ -1,0 +1,11 @@
+OBJ := $(patsubst %.c,%.o,$(wildcard *.c))
+FLAGS=$(CFLAGS) -g -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -D_LARGEFILE64_SOURCE=1 -D_FILE_OFFSET_BITS=64 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1
+
+all: $(OBJ) 
+
+%.o: %.c %.h
+	gcc $(FLAGS) -c $<
+
+clean:
+	@rm -f *.o
+
