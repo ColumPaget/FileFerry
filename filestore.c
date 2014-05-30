@@ -11,6 +11,10 @@ return(STREAMReadBytes(S,Buffer,MaxLen));
 
 int DefaultWriteBytes(TFileStore *FS, STREAM *S, char *Buffer, int MaxLen)
 {
+static int total=0;
+
+total+=MaxLen;
+printf("WB: %d\n",total);
 return(STREAMWriteBytes(S,Buffer,MaxLen));
 }
 
@@ -352,7 +356,6 @@ if (strcasecmp(D1,D2)==0)
 {
 if (strcmp(HashType,"md5")==0) result=CMP_MD5;
 else if (strcmp(HashType,"sha1")==0) result=CMP_SHA1;
-else if (strcmp(HashType,"sha")==0) result=CMP_SHA1;
 else if (strcmp(HashType,"sha")==0) result=CMP_SHA1;
 else result=CMP_CRC;
 }

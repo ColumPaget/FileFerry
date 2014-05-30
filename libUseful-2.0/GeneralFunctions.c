@@ -226,7 +226,7 @@ char *ptr, *ptr2;
 char *Token=NULL;
 
 ptr=GetToken(Input,PairDelim,&Token,GETTOKEN_QUOTES);
-if (StrLen(Token) && strstr(Token,NameValueDelim))
+if (StrLen(Token))
 {
 ptr2=GetToken(Token,NameValueDelim,Name,GETTOKEN_QUOTES);
 ptr2=GetToken(ptr2,PairDelim,Value,GETTOKEN_QUOTES);

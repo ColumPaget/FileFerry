@@ -29,6 +29,42 @@ int RetVal=FALSE;
 return(RetVal);
 }
 
+
+
+int HTTPReadDocument(STREAM *S, char **ReplyDocument)
+{
+int RetVal, val;
+char *Tempstr=NULL, *ptr;
+
+
+RetVal=HTTPParseResponse(STREAMGetValue(S,"HTTP:ResponseCode"));
+ptr=STREAMGetValue(S,"HTTP:Content-Length");
+if (StrLen(ptr))
+{
+	val=atoi(ptr);
+	if (val > 0)
+	{
+	*ReplyDocument=SetStrLen(*ReplyDocument, val);
+	STREAMReadBytes(S, *ReplyDocument, val);
+	*ReplyDocument[val]='\0';
+	}
+}
+else 
+{
+	*ReplyDocument=CopyStr(*ReplyDocument,"");
+	Tempstr=STREAMReadLine(Tempstr,S);
+	while (Tempstr)
+	{
+	*ReplyDocument=CatStr(*ReplyDocument, Tempstr);
+	Tempstr=STREAMReadLine(Tempstr,S);
+	}
+}
+
+return(RetVal);
+}
+
+
+
 int HTTPPerformBasicCommand(TFileStore *FS, char *Command, char *Path, char *Destination)
 {
 char *Tempstr=NULL;
@@ -308,7 +344,7 @@ Info=(HTTPInfoStruct *) STREAMGetItem(S,"HTTPInfoStruct");
 if (S->Flags & SF_WRONLY) 
 {
 	HTTPTransact(Info);
-	RetVal=HTTPParseResponse(Info->ResponseCode);
+	RetVal=HTTPReadDocument(S, &Tempstr);
 }
 
 STREAMClose(S);

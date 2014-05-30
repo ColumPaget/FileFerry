@@ -10,5 +10,7 @@ TFileStore *HTTPSFileStoreCreate(char *Name, char *ConnectSetup);
 TFileStore *RSSFileStoreCreate(char *Name, char *ConnectSetup);
 
 void HTTPReadLink(TFileStore *FS, char *TagData, char *Pattern, ListNode *Items);
+int HTTPReadDocument(STREAM *S, char **Document);
+
 
 #endif

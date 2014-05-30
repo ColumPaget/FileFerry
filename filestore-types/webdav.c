@@ -32,7 +32,6 @@ if (HTTPInfo)
 	if (*Destination=='/') HTTPInfo->Destination=CopyStr(HTTPInfo->Destination,Destination);
 	else HTTPInfo->Destination=MCopyStr(HTTPInfo->Destination,FS->CurrDir,Destination,NULL);
 
-//	HTTPInfo->Flags |= HTTP_DEBUG;
 	FS->S=HTTPTransact(HTTPInfo);
 
 	if (HTTPInfo->ResponseCode && (*HTTPInfo->ResponseCode=='2')) result=TRUE;
@@ -242,15 +241,15 @@ if (TagType==TAG_RESPONSE)
 
 	if (FI)
 	{
-  if (StrLen(FI->Path) ) 
-	{
-	if (
+	  if (StrLen(FI->Path) ) 
+		{
+			if (
 				(FI->Type==FTYPE_DIR) && 
 				(strcmp(FI->Name,GetBasename(FS->CurrDir))==0)
-		) 
-		FileInfoDestroy(FI);
-		else ListAddNamedItem(Items,FI->Name,FI);
-	}
+				) 
+			FileInfoDestroy(FI);
+			else ListAddNamedItem(Items,FI->Name,FI);
+		}
 	}
 }
 
@@ -504,7 +503,6 @@ TFileStore *WebDAVFileStoreCreate(char *Name, char *ConnectSetup)
 TFileStore *FS;
 char *ptr;
 
-//HTTPSetFlags(HTTP_DEBUG);
 FS=(TFileStore *) calloc(1,sizeof(TFileStore));
 FS->Flags=FS_WRITEABLE | FS_CHDIR_FULLPATH;
 FS->Vars=ListCreate();

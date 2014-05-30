@@ -386,7 +386,7 @@ len=StrLen(ptr);
 
 if ((*ptr=='"') || (*ptr=='\'')) StartQuote=*ptr;
 
-if ((len > 0) && (StartQuote != '\0'))
+if ((len > 0) && (StartQuote != '\0') && (ptr[len-1]==StartQuote))
 {
 if (ptr[len-1]==StartQuote) ptr[len-1]='\0';
 memmove(Str,ptr+1,len);

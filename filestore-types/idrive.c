@@ -146,26 +146,6 @@ return(TRUE);
 
 
 
-
-int IDriveMkDir(TFileStore *FS, char *Dir)
-{
-char *Tempstr=NULL;
-int result=TRUE;
-
-Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/createFolder?uid=",FS->Logon,"&pwd=",FS->Passwd,"&p=",FS->CurrDir,"&foldername=",Dir,NULL);
-FS->S=HTTPMethod("POST",Tempstr,"","");
-Tempstr=STREAMReadDocument(Tempstr, FS->S, TRUE);
-STREAMClose(FS->S);
-FS->S=NULL;
-
-DestroyString(Tempstr);
-
-return(result);
-}
-
-
-
-
 STREAM *IDriveOpenFile(TFileStore *FS, TFileInfo *FI, int Flags)
 {
 char *URL=NULL, *Tempstr=NULL, *Boundary=NULL, *FullPath=NULL, *ptr;
@@ -238,6 +218,7 @@ int IDriveCloseFileWrite(TFileStore *FS, STREAM *S)
 	HTTPTransact(Info);
 			
 
+	
 /*
 <?xml version="1.0" encoding="UTF-8"?>
 <tree message="SUCCESS">
@@ -245,6 +226,9 @@ int IDriveCloseFileWrite(TFileStore *FS, STREAM *S)
         lmd="1969/12/31 16:00:00" message="SUCCESS"/>
 </tree>
 */
+
+		val=HTTPReadDocument(S, &Tempstr);
+		if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
 
 		Vars=ListCreate();
 		IDriveParseResponse(Tempstr, Vars);
@@ -297,12 +281,34 @@ int IDriveCloseFile(TFileStore *FS, STREAM *S)
 
 
 
+int IDriveMkDir(TFileStore *FS, char *Dir)
+{
+char *Tempstr=NULL;
+int result=TRUE, val;
+
+Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/createFolder?uid=",FS->Logon,"&pwd=",FS->Passwd,"&p=",FS->CurrDir,"&foldername=",Dir,NULL);
+FS->S=HTTPMethod("POST",Tempstr,"","");
+val=HTTPReadDocument(FS->S, &Tempstr);
+if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
+
+STREAMClose(FS->S);
+FS->S=NULL;
+
+DestroyString(Tempstr);
+
+return(result);
+}
+
+
+
+
+
 int IDriveRenameFile(TFileStore *FS, char *FromArg, char *ToArg)
 {
 char *Tempstr=NULL, *Error=NULL, *FromPath=NULL, *ToPath=NULL;
 HTTPInfoStruct *Info;
 ListNode *Headers;
-int result;
+int result, val;
 STREAM *S;
 
 
@@ -312,7 +318,9 @@ ToPath=MakeFullPath(ToPath,FS, ToArg);
 Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/renameFileFolder?uid=",FS->Logon,"&pwd=",FS->Passwd,"&oldpath=",FromPath,"&newpath=",ToPath,NULL);
 S=HTTPMethod("POST",Tempstr,"","");
 
-Tempstr=STREAMReadDocument(Tempstr, S, TRUE);
+val=HTTPReadDocument(S, &Tempstr);
+if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
+
 Error=CopyStr(Error,"");
 result=IDriveParseStatusResponse(Tempstr, &Error);
 
@@ -331,15 +339,15 @@ int IDriveDeleteFile(TFileStore *FS, TFileInfo *FI)
 char *Tempstr=NULL, *Error=NULL, *Path=NULL;
 HTTPInfoStruct *Info;
 ListNode *Headers;
-int result;
+int result, val;
 STREAM *S;
 
 Path=MakeFullPath(Path,FS, FI->Name);
 Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/deleteFile?uid=",FS->Logon,"&pwd=",FS->Passwd,"&p=",Path,NULL);
 S=HTTPMethod("POST",Tempstr,"","");
 
-Tempstr=STREAMReadDocument(Tempstr, S, TRUE);
-
+val=HTTPReadDocument(S, &Tempstr);
+if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
 result=IDriveParseStatusResponse(Tempstr, &Error);
 
 DestroyString(Tempstr);
@@ -426,8 +434,8 @@ FS->CurrDir=CopyStr(FS->CurrDir,"");
 FS->InitArg=CopyStr(FS->InitArg,ConnectSetup);
 FS->Name=CopyStr(FS->Name,Name);
 
-SetVar(FS->Vars,"LSFormat:Long","%s %m %v %n ");
 SetVar(FS->Vars,"LSFormat:Details","%s %m %v %n ");
+SetVar(FS->Vars,"LSFormat:Long","%S %m %v %n ");
 
 
 FS->Create=IDriveFileStoreCreate;

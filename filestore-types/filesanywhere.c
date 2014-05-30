@@ -3,7 +3,7 @@
 
 #include "filesanywhere.h"
 
-#define LOGIN_URL "http://api.filesanywhere.com/AccountLogin"
+#define LOGIN_URL "https://api.filesanywhere.com/AccountLogin"
 #define API_KEY "40D380BA-4E80-46D9-8629-6A2F229DBA94"
 
 int FAWCommand(TFileStore *FS, char *XML, char *SOAPAction, char **ResponseData)
@@ -17,12 +17,13 @@ if (! FS)
 return(FALSE);
 }
 
-if (! FS->Extra) HTTPInfo=HTTPInfoFromURL("POST", "http://api.filesanywhere.com/fawapi.asmx");
+if (! FS->Extra) HTTPInfo=HTTPInfoFromURL("POST", "https://api.filesanywhere.com/fawapi.asmx");
 else HTTPInfo=(HTTPInfoStruct *) FS->Extra;
 SetVar(HTTPInfo->CustomSendHeaders,"SOAPAction", SOAPAction);
  HTTPInfo->PostContentType=CopyStr(HTTPInfo->PostContentType,"text/xml; charset=utf-8");
  HTTPInfo->PostData=CopyStr(HTTPInfo->PostData,XML);
  HTTPInfo->PostContentLength=StrLen(XML);
+HTTPInfo->Flags |= HTTP_DEBUG;
  S=HTTPTransact(HTTPInfo);
 
 *ResponseData=CopyStr(*ResponseData,"");
@@ -36,6 +37,8 @@ if (S)
 
   STREAMClose(S);
 }
+
+printf("RESPONSE CODE: %s\n",HTTPInfo->ResponseCode);
 
 if (strcmp(HTTPInfo->ResponseCode,"200")==0) return(TRUE);
 return(FALSE);
@@ -118,7 +121,7 @@ XML=MCopyStr(XML,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
 "</soap:Envelope>\n",
 NULL);
 
-result=FAWCommand(FS, XML, "http://api.filesanywhere.com/ListItems",&Tempstr);
+result=FAWCommand(FS, XML, "https://api.filesanywhere.com/ListItems",&Tempstr);
 
 ptr=XMLGetTag(Tempstr,NULL,&TagName,&TagData);
 while (ptr)
@@ -164,7 +167,7 @@ XML=MCopyStr(XML,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
 "<NewFolderName>",Dir,"</NewFolderName>\n",
 "</CreateFolder> </soap:Body> </soap:Envelope>\n",NULL);
 
-result=FAWCommand(FS, XML, "http://api.filesanywhere.com/CreateFolder",&Tempstr);
+result=FAWCommand(FS, XML, "https://api.filesanywhere.com/CreateFolder",&Tempstr);
 
 DestroyString(Tempstr);
 DestroyString(XML);
@@ -200,7 +203,7 @@ XML=MCopyStr(XML,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
 " </soap:Body></soap:Envelope>\n",NULL);
  
 
-result=FAWCommand(FS, XML, "http://api.filesanywhere.com/SendItemsELinkWithDefaults",&Tempstr);
+result=FAWCommand(FS, XML, "https://api.filesanywhere.com/SendItemsELinkWithDefaults",&Tempstr);
 
 
 DestroyString(Tempstr);
@@ -229,8 +232,8 @@ int result;
 if (Flags & OPEN_WRITE)
 {
 	FileName=HTTPQuote(FileName,FI->Path);
- 	HTTPInfo=HTTPInfoFromURL("POST", "http://api.filesanywhere.com/fawapi.asmx");
-	SetVar(HTTPInfo->CustomSendHeaders,"SOAPAction", "http://api.filesanywhere.com/AppendChunk");
+ 	HTTPInfo=HTTPInfoFromURL("POST", "https://api.filesanywhere.com/fawapi.asmx");
+	SetVar(HTTPInfo->CustomSendHeaders,"SOAPAction", "https://api.filesanywhere.com/AppendChunk");
 	HTTPInfo->PostContentType=CopyStr(HTTPInfo->PostContentType,"text/xml; charset=utf-8");
 //	HTTPInfo->Flags |= HTTP_KEEPALIVE | HTTP_NOCOMPRESS;	
 	HTTPInfo->Flags |= HTTP_KEEPALIVE;	
@@ -252,7 +255,7 @@ else
 	"<Path>",FI->Path,"</Path>\n",
 	"</DownloadFile> </soap:Body> </soap:Envelope>\n",NULL);
 
-	result=FAWCommand(FS, XML, "http://api.filesanywhere.com/DownloadFile",&Tempstr);
+	result=FAWCommand(FS, XML, "https://api.filesanywhere.com/DownloadFile",&Tempstr);
 
 	ptr=XMLGetTag(Tempstr,NULL,&TagName,&TagData);
 	while (ptr)
@@ -493,7 +496,7 @@ XML=MCopyStr(XML,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
 "<NewName>",QuotedTo,"</NewName>\n",
 "</RenameItem>\n</soap:Body>\n</soap:Envelope>\n",NULL);
 
-FAWCommand(FS, XML, "http://api.filesanywhere.com/RenameItem",&Tempstr);
+FAWCommand(FS, XML, "https://api.filesanywhere.com/RenameItem",&Tempstr);
 ptr=XMLGetTag(Tempstr,NULL,&TagName,&TagData);
 while (ptr)
 {
@@ -539,7 +542,7 @@ XML=MCopyStr(XML,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
 if (FI->Type==FTYPE_DIR) XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>folder</Type> <Path>",FI->Path,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems> </soap:Body> </soap:Envelope>\n",NULL);
 else XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>file</Type> <Path>",FI->Path,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems> </soap:Body> </soap:Envelope>\n",NULL);
 
-FAWCommand(FS, XML, "http://api.filesanywhere.com/DeleteItems",&Tempstr);
+FAWCommand(FS, XML, "https://api.filesanywhere.com/DeleteItems",&Tempstr);
 
 ptr=XMLGetTag(Tempstr,NULL,&TagName,&TagData);
 while (ptr)
