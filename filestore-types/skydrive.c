@@ -8,18 +8,13 @@
 #define SKYDRIVE_CLIENT_SECRET "zYdVUtaR8mh00vfdZwKcY2iU1GPtC-9h"
 
 
-void SkydriveReadJSON(STREAM *S, ListNode *Vars)
+void SkyDriveReadJSON(STREAM *S, ListNode *Vars)
 {
 char *Tempstr=NULL, *JSON=NULL, *Name=NULL, *Value=NULL;
 char *ptr;
 
-Tempstr=STREAMReadLine(Tempstr, S);
-while (Tempstr)
-{
-	JSON=CatStr(JSON,Tempstr);
-	Tempstr=STREAMReadLine(Tempstr, S);
-}
 
+JSON=STREAMReadDocument(JSON,S,FALSE);
 strrep(JSON,'\r','\n');
 StripLeadingWhitespace(JSON);
 StripTrailingWhitespace(JSON);
@@ -60,41 +55,66 @@ FI=(TFileInfo *) calloc(1,sizeof(TFileInfo));
 //SkyDrive JSON is horrible. It's terminated with \r
 printf("JSON: %s\n",*JSON);
 
-*JSON=GetToken(*JSON,"\r",&Tempstr,0);
+*JSON=GetNameValuePair(*JSON,"\r",":",&Name,&Value);
 while (*JSON)
 {
-StripLeadingWhitespace(Tempstr);
-StripTrailingWhitespace(Tempstr);
+StripTrailingWhitespace(Name);
+StripLeadingWhitespace(Name);
 
-if (strcmp("}, {",Tempstr)==0) break;
+StripTrailingWhitespace(Value);
+StripLeadingWhitespace(Value);
 
-ptr2=Tempstr+StrLen(Tempstr)-1;
+
+if (strcmp(Name,"}, {")==0) break;
+ptr2=Value+StrLen(Value)-1;
 if (*ptr2==',') *ptr2='\0';
-
-ptr2=GetToken(Tempstr,":",&Name,GETTOKEN_QUOTES);
-while (isspace(*ptr2)) ptr2++;
-ptr2=GetToken(ptr2,":",&Value,GETTOKEN_QUOTES);
+StripQuotes(Value);
 
 printf("%s -> %s\n",Name,Value);
 
+switch (*Name)
+{
+case 'f':
+if ((strcmp(Name,"from")==0) && (strcmp(Value,"{")==0))
+{
+while (*JSON) 
+{
+	StripTrailingWhitespace(Name);
+	StripLeadingWhitespace(Name);
+
+	printf("FROM: [%s] [%s]\n",Name,Value);
+	if (StrLen(Name) && (*Name=='}')) break;
+	*JSON=GetNameValuePair(*JSON,"\r",":",&Name,&Value);
+}
+}
+break;
+
+case 'n':
 if (strcmp(Name,"name")==0)
 {
 	if (strcmp(Value,"SkyDrive")==0) FI->Name=CopyStr(FI->Name,"/");
 	else FI->Name=CopyStr(FI->Name,Value);
 }
+break;
 
+case 't':
 if (strcmp(Name,"type")==0)
 {
 	if (strcmp(Value,"folder")==0) FI->Type=FTYPE_DIR;
 	else FI->Type=FTYPE_FILE;
 }
+break;
 
-if (strcmp(Name,"id")==0) FI->ID=CopyStr(FI->ID,Value);
-if (strcmp(Name,"size")==0) FI->Size=atoi(Value);
-if (strcmp(Name,"upload_location")==0) FI->EditPath=CopyStr(FI->EditPath,Value);
-if (strcmp(Name,"link")==0) FI->Path=CopyStr(FI->Path,Value);
+case 'i': if (strcmp(Name,"id")==0) FI->ID=CopyStr(FI->ID,Value); break;
 
-*JSON=GetToken(*JSON,"\r",&Tempstr,0);
+case 's': if (strcmp(Name,"size")==0) FI->Size=atoi(Value); break;
+
+case 'u': if (strcmp(Name,"upload_location")==0) FI->EditPath=CopyStr(FI->EditPath,Value); break;
+
+case 'l': if (strcmp(Name,"link")==0) FI->Path=CopyStr(FI->Path,Value); break;
+}
+
+*JSON=GetNameValuePair(*JSON,"\r",":",&Name,&Value);
 }
 
 printf("FI: %s %d\n",FI->Name,FI->Size);
@@ -102,6 +122,15 @@ printf("FI: %s %d\n",FI->Name,FI->Size);
 DestroyString(Tempstr);
 DestroyString(Name);
 DestroyString(Value);
+
+
+//if we didn't get at least an ID for the file, then don't count
+//it
+if (! StrLen(FI->ID))
+{
+FileInfoDestroy(FI);
+return(NULL);
+}
 
 return(FI);
 }
@@ -115,16 +144,13 @@ TFileInfo *FI;
 HTTPInfoStruct *Info;
 ListNode *Vars;
 
-Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/files?access_token=",FS->Passwd,NULL);
-FS->S=HTTPGet(Tempstr,"","");
-Tempstr=STREAMReadLine(Tempstr,FS->S);
-while (Tempstr)
-{
-StripTrailingWhitespace(Tempstr);
-StripLeadingWhitespace(Tempstr);
-JSON=CatStr(JSON,Tempstr);
-Tempstr=STREAMReadLine(Tempstr,FS->S);
-}
+//Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/files?access_token=",FS->Passwd,NULL);
+Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/",FS->CurrDirPath,"/files",NULL);
+
+printf("LD: %s\n",Tempstr);
+FS->S=HTTPGet(Tempstr,HTTP_AUTH_BY_TOKEN,FS->Passwd);
+
+JSON=STREAMReadDocument(JSON,FS->S,FALSE);
 
 ptr=JSON;
 FI=SkyDriveParseFile(&ptr);
@@ -138,13 +164,13 @@ STREAMClose(FS->S);
 
 //FS->CurrDirPath=CopyStr(FS->CurrDirPath,FI->EditPath);
 
-Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/quota?access_token=",FS->Passwd,NULL);
-
-FS->S=HTTPMethod("GET",Tempstr,"","");
+//Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/quota?access_token=",FS->Passwd,NULL);
+Tempstr=CopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/quota");
+FS->S=HTTPGet(Tempstr,HTTP_AUTH_BY_TOKEN,FS->Passwd);
 
 
 Vars=ListCreate();
-SkydriveReadJSON(FS->S, Vars);
+SkyDriveReadJSON(FS->S, Vars);
 
 ptr=GetVar(Vars,"quota");
 if (StrLen(ptr)) FS->BytesAvailable=strtod(ptr,NULL);
@@ -175,15 +201,14 @@ if (Flags & OPEN_WRITE)
 {
 //PUT https://apis.live.net/v5.0/me/skydrive/files/HelloWorld.txt?access_token=ACCESS_TOKEN
 
-	Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/files/",FI->Name,"?access_token=",FS->Passwd,NULL);
-	//Tempstr=MCopyStr(Tempstr,FS->CurrDirPath,"?access_token=",FS->Passwd,NULL);
+	Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/",FS->CurrDirPath,"/files/",FI->Name,NULL);
 	Info=HTTPInfoFromURL("PUT", Tempstr);
-	//Info->PostContentType=CopyStr(Info->PostContentType,"octet/stream");
+	HTTPInfoSetAuth(Info, "", FS->Passwd, HTTP_AUTH_TOKEN);
 	Info->PostContentLength=FI->Size;
 	S=HTTPTransact(Info);
 	S->Flags |= SF_WRONLY;
 }
-else S=HTTPGet(FI->Path,"","");
+else S=HTTPGet(FI->Path,HTTP_AUTH_BY_TOKEN,FS->Passwd);
 
 FS->Extra=(void *) Info;
 
@@ -209,13 +234,8 @@ int SkyDriveCloseFile(TFileStore *FS, STREAM *S)
 		S=HTTPTransact(Info);
 		if (S)
 		{
-				Tempstr=STREAMReadLine(Tempstr,S);
-				while (Tempstr)
-				{
+				Tempstr=STREAMReadDocument(Tempstr,S,FALSE);
 	printf("CF: %s %s\n",Info->ResponseCode, Tempstr);
-					Response=HtmlDeQuote(Response,Tempstr);
-					Tempstr=STREAMReadLine(Tempstr,S);
-				}
 				STREAMClose(S);
 		}
 	}
@@ -238,7 +258,6 @@ int SkyDriveCloseFile(TFileStore *FS, STREAM *S)
 
 	return(RetVal);
 }
-
 
 
 
@@ -278,62 +297,59 @@ DestroyString(Tempstr);
 DestroyString(XML);
 DestroyString(Tempstr);
 }
+*/
 
 
-void GDriveMkDir(TFileStore *FS, char *Title)
+void SkyDriveChDir(TFileStore *FS, char *Dir)
 {
-char *JSON=NULL, *Tempstr=NULL;
-HTTPInfoStruct *Info;
-ListNode *Headers;
+ListNode *Node;
+TFileInfo *FI;
 
-Headers=ListCreate();
+	if ((! StrLen(Dir)) || (strcmp(Dir,"/")==0))
+	{
+	FS->CurrDirPath=CopyStr(FS->CurrDirPath,"me/skydrive/");
+	}
+	else 
+	{
+		Node=ListFindNamedItem(FS->DirListing,Dir);
+		if (Node) 
+		{
+			FI=(TFileInfo *) Node->Item;
+			FS->CurrDirPath=CopyStr(FS->CurrDirPath,FI->ID);
+		}
+	}
 
-JSON=MCopyStr(JSON,"{\n\"title\": \"",Title,"\",\n\"mimeType\": \"application/vnd.google-apps.folder\"\n}\n",NULL);
-
-//"parents": [{"id":"0ADK06pfg"}]
-
-SetVar(Headers,"Content-type","application/json");
-Tempstr=FormatStr(Tempstr,"%d",StrLen(JSON));
-SetVar(Headers,"Content-length",Tempstr);
-
-Tempstr=CopyStr(Tempstr,"https://www.googleapis.com/drive/v2/files");
-Info=GDataConnect(FS,"POST", Tempstr, JSON,Headers,0);
-
-JSON=STREAMReadDocument(JSON,Info->S,FALSE);
-
-printf("%s\n",JSON); 
-DestroyString(Tempstr);
-DestroyString(JSON);
-
-ListDestroy(Headers,DestroyString);
-if (Info) HTTPInfoDestroy(Info);
+	FS->CurrDir=CopyStr(FS->CurrDir,Dir);
 }
 
 
-int GDriveDeleteFile(TFileStore *FS, TFileInfo *FI)
+
+int SkyDriveMkDir(TFileStore *FS, char *Name)
 {
-char *Tempstr=NULL;
-HTTPInfoStruct *Info;
+char *JSON=NULL, *ptr;
 int result=FALSE;
+TFileInfo *FI;
 
-Tempstr=MCopyStr(Tempstr,"https://www.googleapis.com/drive/v2/files/",FI->ID,NULL);
-Info=GDataConnect(FS,"DELETE", Tempstr, NULL, NULL,0);
+JSON=MCopyStr(JSON,"{\n\"name\": \"",Name,"\"\n}\n",NULL);
+FS->S=HTTPPost(FS->CurrDirPath, HTTP_AUTH_BY_TOKEN, FS->Passwd, "application/json", JSON);
 
-if (Info->ResponseCode && (*Info->ResponseCode=='2')) result=TRUE;
-
-Tempstr=STREAMReadLine(Tempstr,Info->S);
-while (Tempstr)
+/* RESPONSE LOOKS LIKE:
 {
-Tempstr=STREAMReadLine(Tempstr,Info->S);
+   "upload_location": "https://apis.live.net/v5.0/foldef.8d458c461c4417fc.8D458C   "link": "https://onedfive.live.com/fedif.aspx?cid=8d458c461c4417fc&page=view&}  "client_updated_time": "2014-05-30T21:29:38+0000"5"
+*/
+
+JSON=STREAMReadDocument(JSON,FS->S,FALSE);
+FI=SkyDriveParseFile(&JSON);
+if (FI && StrLen(FI->Path))
+{
+	ListAddNamedItem(FS->DirListing,Name,FI);
+	result=TRUE;
 }
 
-HTTPInfoDestroy(Info);
-DestroyString(Tempstr);
+DestroyString(JSON);
 
 return(result);
 }
-
-*/
 
 
 
@@ -433,23 +449,24 @@ if (! StrLen(FS->Passwd))
 {
 	SetVar(FS->Vars,"OAuthScope","wl.skydrive_update");
 	SkyDriveOAuth(FS);
-	Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);
 }
-else if (FS->Settings & FS_OAUTH) Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);
+
+Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);
+FS->Passwd=CopyStr(FS->Passwd,Tempstr);
 
 if (StrLen(Tempstr))
 {
 SetVar(FS->Vars,"AuthToken",Tempstr);
 result=TRUE;
 
-URL=CopyStr(URL,"https://apis.live.net/v5.0/me/skydrive?access_token=");
-URL=CatStr(URL,FS->Passwd);
 
+SkyDriveChDir(FS, "/");
 SkyDriveLoadDir(FS, "/", NULL, 0);
 
 printf("SDLD: %s\n",FS->CurrDirPath);
 
 /*
+URL=MCopyStr(URL,FS->CurrDirPath,"?access_token=",FS->Passwd,NULL);
 printf("Connect: %s\n",URL);
 FS->S=HTTPGet(URL,"","");
 if (FS->S) 
@@ -503,15 +520,15 @@ FS->Open=SkyDriveOpen;
 FS->Close=SkyDriveClose;
 FS->OpenFile=SkyDriveOpenFile;
 FS->CloseFile=SkyDriveCloseFile;
+FS->MkDir=SkyDriveMkDir;
 FS->LoadDir=SkyDriveLoadDir;
 FS->ReadBytes=DefaultReadBytes;
 FS->WriteBytes=DefaultWriteBytes;
+FS->ChDir=SkyDriveChDir;
 
 /*
-//FS->ChDir=GDriveChDir;
 FS->DeleteFile=GDriveDeleteFile;
 
-FS->MkDir=GDriveMkDir;
 
 FS->RenameFile=GDriveRenameFile;
 FS->GetFileSize=FileStoreGetFileSize;

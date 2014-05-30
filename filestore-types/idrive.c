@@ -105,7 +105,7 @@ ListNode *Vars;
 
 	Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/browseFolder?uid=",FS->Logon,"&pwd=",FS->Passwd,"&p=",FS->CurrDir,NULL);
 
-	FS->S=HTTPMethod("POST",Tempstr,"","");
+	FS->S=HTTPMethod("POST",Tempstr,"","","","",0);
 	Tempstr=STREAMReadDocument(Tempstr, FS->S, TRUE);
 	
 	ptr=XMLGetTag(Tempstr,NULL,&TagName,&TagData);
@@ -124,7 +124,7 @@ STREAMClose(FS->S);
 FS->S=NULL;
 
 Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/getAccountQuota?uid=",FS->Logon,"&pwd=",FS->Passwd,NULL);
-FS->S=HTTPMethod("POST",Tempstr,"","");
+FS->S=HTTPMethod("POST",Tempstr,"","","","",0);
 Tempstr=STREAMReadDocument(Tempstr, FS->S, TRUE);
 
 Vars=ListCreate();
@@ -186,7 +186,7 @@ TFileInfo *tmpFI;
 //		else FI=FileStoreGetFileInfo(FS, FI->Path);
 
 		  URL=FormatStr(URL,"https://%s/evs/downloadFile?uid=%s&pwd=%s&p=%s&version=%d",FS->Host,FS->Logon,FS->Passwd,Tempstr,FI->Version);
-			FS->S=HTTPMethod("POST",URL,"","");
+			FS->S=HTTPMethod("POST",URL,"","","","",0);
 			FS->Extra=NULL;
 //		if (FI != OpenFI) FileInfoDestroy(FI);
 	}
@@ -287,7 +287,7 @@ char *Tempstr=NULL;
 int result=TRUE, val;
 
 Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/createFolder?uid=",FS->Logon,"&pwd=",FS->Passwd,"&p=",FS->CurrDir,"&foldername=",Dir,NULL);
-FS->S=HTTPMethod("POST",Tempstr,"","");
+FS->S=HTTPMethod("POST",Tempstr,"","","","",0);
 val=HTTPReadDocument(FS->S, &Tempstr);
 if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
 
@@ -316,7 +316,7 @@ FromPath=MakeFullPath(FromPath,FS, FromArg);
 ToPath=MakeFullPath(ToPath,FS, ToArg);
 
 Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/renameFileFolder?uid=",FS->Logon,"&pwd=",FS->Passwd,"&oldpath=",FromPath,"&newpath=",ToPath,NULL);
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 
 val=HTTPReadDocument(S, &Tempstr);
 if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
@@ -344,7 +344,7 @@ STREAM *S;
 
 Path=MakeFullPath(Path,FS, FI->Name);
 Tempstr=MCopyStr(Tempstr,"https://",FS->Host,"/evs/deleteFile?uid=",FS->Logon,"&pwd=",FS->Passwd,"&p=",Path,NULL);
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 
 val=HTTPReadDocument(S, &Tempstr);
 if (Settings.Flags & FLAG_VERBOSE) printf("\n%s\n",Tempstr);
@@ -385,7 +385,7 @@ FS->CurrDir=CopyStr(FS->CurrDir,"/");
 if (StrLen(FS->InitDir)) FS->ChDir(FS,FS->InitDir);
 
 Tempstr=MCopyStr(Tempstr,"https://evs.idrive.com/evs/getServerAddress?uid=",FS->Logon,"&pwd=",FS->Passwd,NULL);
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 
 if (S)
 {

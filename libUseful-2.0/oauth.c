@@ -105,7 +105,7 @@ Tempstr=MCopyStr(Tempstr,LoginURL,"?client_id=",Encode,NULL);
 Encode=HTTPQuote(Encode,Scope);
 Tempstr=MCatStr(Tempstr,"&scope=",Encode,NULL);
 
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 
 if (S)
 {
@@ -149,7 +149,7 @@ Tempstr=MCatStr(Tempstr,"&client_secret=",Encode,NULL);
 Tempstr=MCatStr(Tempstr,"&code=",DeviceCode,NULL);
 Tempstr=MCatStr(Tempstr,"&grant_type=","http://oauth.net/grant_type/device/1.0",NULL);
 
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 if (S)
 {
 Tempstr=STREAMReadLine(Tempstr,S);
@@ -185,7 +185,7 @@ Tempstr=MCatStr(Tempstr,"&client_secret=",ClientSecret,NULL);
 Tempstr=MCatStr(Tempstr,"&refresh_token=",RefreshToken,NULL);
 Tempstr=MCatStr(Tempstr,"&grant_type=","refresh_token",NULL);
 
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 if (S)
 {
 Tempstr=STREAMReadLine(Tempstr,S);
@@ -237,7 +237,7 @@ Tempstr=MCatStr(Tempstr,"&code=",AuthCode,NULL);
 Tempstr=MCatStr(Tempstr,"&redirect_uri=",RedirectURL,NULL);
 Tempstr=MCatStr(Tempstr,"&grant_type=","authorization_code",NULL);
 
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 if (S)
 {
 Tempstr=STREAMReadLine(Tempstr,S);

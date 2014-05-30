@@ -75,7 +75,7 @@ int result=FALSE;
 
 Tempstr=FormatStr(Tempstr,"https://www.google.com/accounts/ClientLogin?accountType=GOOGLE&Email=%s&Passwd=%s&service=%s&source=colum-autoget-0.1",FS->Logon,FS->Passwd,GetVar(FS->Vars,"ClientLoginScope"));
 
-S=HTTPMethod("POST",Tempstr,"","");
+S=HTTPMethod("POST",Tempstr,"","","","",0);
 
 if (S)
 {
