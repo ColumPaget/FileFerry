@@ -11,10 +11,6 @@ return(STREAMReadBytes(S,Buffer,MaxLen));
 
 int DefaultWriteBytes(TFileStore *FS, STREAM *S, char *Buffer, int MaxLen)
 {
-static int total=0;
-
-total+=MaxLen;
-printf("WB: %d\n",total);
 return(STREAMWriteBytes(S,Buffer,MaxLen));
 }
 

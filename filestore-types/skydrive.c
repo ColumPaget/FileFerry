@@ -326,12 +326,13 @@ TFileInfo *FI;
 
 int SkyDriveMkDir(TFileStore *FS, char *Name)
 {
-char *JSON=NULL, *ptr;
+char *JSON=NULL, *Tempstr=NULL, *ptr;
 int result=FALSE;
 TFileInfo *FI;
 
 JSON=MCopyStr(JSON,"{\n\"name\": \"",Name,"\"\n}\n",NULL);
-FS->S=HTTPPost(FS->CurrDirPath, HTTP_AUTH_BY_TOKEN, FS->Passwd, "application/json", JSON);
+Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/",FS->CurrDirPath,NULL);
+FS->S=HTTPPost(Tempstr, HTTP_AUTH_BY_TOKEN, FS->Passwd, "application/json", JSON);
 
 /* RESPONSE LOOKS LIKE:
 {
@@ -347,6 +348,7 @@ if (FI && StrLen(FI->Path))
 }
 
 DestroyString(JSON);
+DestroyString(Tempstr);
 
 return(result);
 }
