@@ -172,7 +172,7 @@ DestroyString(Encode);
 
 
 
-void OAuthDeviceRefreshToken(char *TokenURL, char *ClientID, char *ClientSecret, char *RefreshToken, char **AccessToken)
+void OAuthDeviceRefreshToken(char *TokenURL, char *ClientID, char *ClientSecret, char *RequestRefreshToken, char **AccessToken, char **RefreshToken)
 {
 char *Tempstr=NULL, *Encode=NULL;
 ListNode *Vars=NULL;
@@ -182,7 +182,7 @@ Vars=ListCreate();
 
 Tempstr=MCopyStr(Tempstr,TokenURL,"?client_id=",ClientID,NULL);
 Tempstr=MCatStr(Tempstr,"&client_secret=",ClientSecret,NULL);
-Tempstr=MCatStr(Tempstr,"&refresh_token=",RefreshToken,NULL);
+Tempstr=MCatStr(Tempstr,"&refresh_token=",RequestRefreshToken,NULL);
 Tempstr=MCatStr(Tempstr,"&grant_type=","refresh_token",NULL);
 
 S=HTTPMethod("POST",Tempstr,"","","","",0);
@@ -199,7 +199,7 @@ Tempstr=STREAMReadLine(Tempstr,S);
 } 
 
 *AccessToken=CopyStr(*AccessToken,GetVar(Vars,"access_token"));
-//*RefreshToken=CopyStr(*RefreshToken,GetVar(Vars,"refresh_token"));
+*RefreshToken=CopyStr(*RefreshToken,GetVar(Vars,"refresh_token"));
 
 ListDestroy(Vars,DestroyString);
 DestroyString(Tempstr);
@@ -244,7 +244,7 @@ Tempstr=STREAMReadLine(Tempstr,S);
 while (Tempstr)
 {
 StripTrailingWhitespace(Tempstr);
-printf("OA: %s\n",Tempstr);
+fprintf(stderr,"OA: %s\n",Tempstr);
 OAuthParseJSON(Tempstr, Vars);
 Tempstr=STREAMReadLine(Tempstr,S);
 }

@@ -5,7 +5,7 @@ LIBS = -lcrypto -lssl -lz
 INSTALL=/bin/install -c
 prefix=/usr/local
 bindir=$(prefix)${exec_prefix}/bin
-FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -D_LARGEFILE64_SOURCE=1 -D_FILE_OFFSET_BITS=64 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1
+FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1
 
 OBJ=common.o Settings.o FileTypes.o filestore.o ConfigFile.o directory_listing.o commands-file-info.o commands-file-transfer.o commands-parse.o
 DRIVERS_C := $(wildcard filestore-types/*.c)

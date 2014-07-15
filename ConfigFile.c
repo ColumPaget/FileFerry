@@ -9,6 +9,7 @@ TFileStore *FS=NULL;
 char *Type=NULL, *Host=NULL, *Login=NULL, *Password=NULL, *RefreshToken=NULL;
 int Flags=0;
 
+
 Tempstr=STREAMReadLine(Tempstr,S);
 while (Tempstr)
 {
@@ -93,7 +94,7 @@ return(FileStores);
 void ConfigFileSaveFileStores()
 {
 STREAM *S;
-char *Tempstr=NULL, *PortStr=NULL;
+char *Tempstr=NULL, *PortStr=NULL, *ptr;
 ListNode *Curr;
 TFileStore *FS;
 
@@ -112,7 +113,8 @@ if (S)
 		Tempstr=MCatStr(Tempstr, "Type: ",FS->Type,"\n","Host: ",FS->Host,"\n","Port: ",PortStr,"\n","Login: ",FS->Logon,"\n","Password: ",FS->Passwd,"\n",NULL);
 		if (FS->Settings & FS_OAUTH) 
 		{
-			Tempstr=MCatStr(Tempstr, "OAuth\nRefreshToken: ",GetVar(FS->Vars,"OAuthRefreshToken"),"\n",NULL);
+			ptr=GetVar(FS->Vars,"OAuthRefreshToken");
+			if (StrLen(ptr)) Tempstr=MCatStr(Tempstr, "OAuth\nRefreshToken: ", ptr,"\n",NULL);
 		}
 		Tempstr=MCatStr(Tempstr, "}\n\n",NULL);
 		STREAMWriteLine(Tempstr,S);

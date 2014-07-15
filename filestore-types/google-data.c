@@ -30,7 +30,7 @@ RefreshToken=CopyStr(RefreshToken,GetVar(FS->Vars,"OAuthRefreshToken"));
 
 if (StrLen(RefreshToken))
 {
-	OAuthDeviceRefreshToken("https://accounts.google.com/o/oauth2/token", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RefreshToken, &FS->Passwd);
+	OAuthDeviceRefreshToken("https://accounts.google.com/o/oauth2/token", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RefreshToken, &FS->Passwd, &RefreshToken);
 	printf("REFRESH: %s\n",FS->Passwd);
 	SetVar(FS->Vars,"OAuthRefreshToken",RefreshToken);
 }
@@ -73,6 +73,7 @@ STREAM *S;
 char *Tempstr=NULL;
 int result=FALSE;
 
+HTTPSetFlags(HTTP_DEBUG);
 Tempstr=FormatStr(Tempstr,"https://www.google.com/accounts/ClientLogin?accountType=GOOGLE&Email=%s&Passwd=%s&service=%s&source=colum-autoget-0.1",FS->Logon,FS->Passwd,GetVar(FS->Vars,"ClientLoginScope"));
 
 S=HTTPMethod("POST",Tempstr,"","","","",0);
@@ -83,6 +84,7 @@ if (S)
   while (Tempstr)
   {
     StripTrailingWhitespace(Tempstr);
+printf("GA: %s\n",Tempstr);
     if (strncmp(Tempstr,"Auth=",5)==0) 
 		{
 				*AuthToken=MCopyStr(*AuthToken,"GoogleLogin auth=",Tempstr+5,NULL);

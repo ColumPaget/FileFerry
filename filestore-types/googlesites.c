@@ -284,9 +284,12 @@ return(FALSE);
 
 FS->S=STREAMCreate();
 
+printf("PASS: [%s]\n",FS->Passwd);
 //if (! StrLen(FS->Passwd)) RequestAuthDetails(&FS->Logon,&FS->Passwd);
+
 if (! StrLen(FS->Passwd)) 
 {
+printf("OAuth!\n");
 	SetVar(FS->Vars,"OAuthScope","https://sites.google.com/feeds");
 	GoogleOAuth(FS);
 	Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);

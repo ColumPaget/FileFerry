@@ -8,12 +8,104 @@
 #define SKYDRIVE_CLIENT_SECRET "zYdVUtaR8mh00vfdZwKcY2iU1GPtC-9h"
 
 
+
+
+char *SkyDriveOAuthReadAuthorizationCode(char *RetBuff)
+{
+char *Tempstr=NULL, *Name=NULL, *Value=NULL, *ptr;
+
+	Tempstr=SetStrLen(Tempstr,1024);
+	read(0,Tempstr,1024);
+	StripTrailingWhitespace(Tempstr);
+
+	ptr=strchr(Tempstr,'?');
+	if (ptr)
+	{
+		ptr++;
+		ptr=GetNameValuePair(ptr,"&","=",&Name,&Value);
+		while (ptr)
+		{
+			if (StrLen(Name) && (strcasecmp(Name,"code")==0)) RetBuff=CopyStr(RetBuff,Value);
+			ptr=GetNameValuePair(ptr,"&","=",&Name,&Value);
+		}
+	}
+
+DestroyString(Name);
+DestroyString(Value);
+DestroyString(Tempstr);
+
+return(RetBuff);
+}
+
+
+int SkyDriveOAuth(TFileStore *FS)
+{
+char *RefreshToken=NULL, *URL=NULL;
+char *Tempstr=NULL;
+
+
+SetVar(FS->Vars,"OAuthScope","wl.skydrive_update wl.offline_access");
+RefreshToken=CopyStr(RefreshToken,GetVar(FS->Vars,"OAuthRefreshToken"));
+
+if (StrLen(RefreshToken))
+{
+	printf("REFRESH: %s\n",RefreshToken);
+	OAuthDeviceRefreshToken("https://login.live.com/oauth20_token.srf", SKYDRIVE_CLIENT_ID, SKYDRIVE_CLIENT_SECRET, RefreshToken, &FS->Passwd, &RefreshToken);
+	printf("REFRESH: %s\n",FS->Passwd);
+	SetVar(FS->Vars,"OAuthRefreshToken",RefreshToken);
+}
+else
+{
+	OAuthInstalledAppURL("https://login.live.com/oauth20_authorize.srf", SKYDRIVE_CLIENT_ID, GetVar(FS->Vars,"OAuthScope"),"https://login.live.com/oauth20_desktop.srf", &URL);
+
+	printf("CUT AND PASTE THE FOLLOWING URL INTO A WEBBROWSER:\n\n %s\n\n",URL);
+	printf("Login and/or grant access, then skydrive will send you to a blank page. Copy the entire URL out of the 'location' bar in your browser, and paste it into here.\n");
+
+	
+	Tempstr=CopyStr(Tempstr,"");
+	while (! StrLen(Tempstr))
+	{
+		printf("\nAccess Code: "); fflush(NULL);
+
+		Tempstr=SkyDriveOAuthReadAuthorizationCode(Tempstr);
+		if (StrLen(Tempstr)) break;
+		printf("\nERROR: Couldn't extract oauth code. Paste entire URL from your browser.\n");
+	}
+
+	OAuthInstalledAppGetAccessToken("https://login.live.com/oauth20_token.srf", SKYDRIVE_CLIENT_ID, SKYDRIVE_CLIENT_SECRET, Tempstr, "https://login.live.com/oauth20_desktop.srf", &FS->Passwd, &RefreshToken);
+
+	SetVar(FS->Vars,"OAuthRefreshToken",RefreshToken);
+	printf("ACCESS:  %s\n",FS->Passwd);
+	printf("REFRESH: %s\n",RefreshToken);
+}
+
+FS->Settings |= FS_OAUTH;
+ConfigFileSaveFileStore(FS);
+
+//Do this AFTER SaveFileStore, because we don't want 'Bearer' saved as
+//Part of the password
+Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);
+FS->Passwd=CopyStr(FS->Passwd,Tempstr);
+
+printf("NEW PASSWD: [%s]\n",FS->Passwd);
+
+DestroyString(RefreshToken);
+DestroyString(Tempstr);
+DestroyString(URL);
+
+return(TRUE);
+}
+
+
+
+
 void SkyDriveReadJSON(STREAM *S, ListNode *Vars)
 {
 char *Tempstr=NULL, *JSON=NULL, *Name=NULL, *Value=NULL;
 char *ptr;
 
 
+printf("RESP: %s\n",STREAMGetValue(S,"HTTP:ResponseCode"));
 JSON=STREAMReadDocument(JSON,S,FALSE);
 strrep(JSON,'\r','\n');
 StripLeadingWhitespace(JSON);
@@ -147,9 +239,17 @@ ListNode *Vars;
 //Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/me/skydrive/files?access_token=",FS->Passwd,NULL);
 Tempstr=MCopyStr(Tempstr,"https://apis.live.net/v5.0/",FS->CurrDirPath,"/files",NULL);
 
-printf("LD: %s\n",Tempstr);
 FS->S=HTTPGet(Tempstr,HTTP_AUTH_BY_TOKEN,FS->Passwd);
 
+if (strcmp(STREAMGetValue(FS->S,"HTTP:ResponseCode"),"401")==0)
+{
+	STREAMClose(FS->S);
+	FS->Passwd=CopyStr(FS->Passwd,"");
+	SkyDriveOAuth(FS);
+	FS->S=HTTPGet(Tempstr,HTTP_AUTH_BY_TOKEN,FS->Passwd);
+}
+
+printf("LD: [%s] %s\n",STREAMGetValue(FS->S,"HTTP:ResponseCode"),Tempstr);
 JSON=STREAMReadDocument(JSON,FS->S,FALSE);
 
 ptr=JSON;
@@ -356,86 +456,6 @@ return(result);
 
 
 
-
-char *SkyDriveOAuthReadAuthorizationCode(char *RetBuff)
-{
-char *Tempstr=NULL, *Name=NULL, *Value=NULL, *ptr;
-
-	Tempstr=SetStrLen(Tempstr,1024);
-	read(0,Tempstr,1024);
-	StripTrailingWhitespace(Tempstr);
-
-	ptr=strchr(Tempstr,'?');
-	if (ptr)
-	{
-		ptr++;
-		ptr=GetNameValuePair(ptr,"&","=",&Name,&Value);
-		while (ptr)
-		{
-			if (StrLen(Name) && (strcasecmp(Name,"code")==0)) RetBuff=CopyStr(RetBuff,Value);
-			ptr=GetNameValuePair(ptr,"&","=",&Name,&Value);
-		}
-	}
-
-DestroyString(Name);
-DestroyString(Value);
-DestroyString(Tempstr);
-
-return(RetBuff);
-}
-
-
-int SkyDriveOAuth(TFileStore *FS)
-{
-char *RefreshToken=NULL, *URL=NULL;
-char *Tempstr=NULL;
-
-
-
-RefreshToken=CopyStr(RefreshToken,GetVar(FS->Vars,"OAuthRefreshToken"));
-
-if (StrLen(RefreshToken))
-{
-	//OAuthDeviceRefreshToken("", GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RefreshToken, &FS->Passwd);
-	printf("REFRESH: %s\n",FS->Passwd);
-	SetVar(FS->Vars,"OAuthRefreshToken",RefreshToken);
-}
-else
-{
-	OAuthInstalledAppURL("https://login.live.com/oauth20_authorize.srf", SKYDRIVE_CLIENT_ID, GetVar(FS->Vars,"OAuthScope"),"https://login.live.com/oauth20_desktop.srf", &URL);
-
-	printf("CUT AND PASTE THE FOLLOWING URL INTO A WEBBROWSER:\n\n %s\n\n",URL);
-	printf("Login and/or grant access, then skydrive will send you to a blank page. Copy the entire URL out of the 'location' bar in your browser, and paste it into here.\n");
-
-	
-	Tempstr=CopyStr(Tempstr,"");
-	while (! StrLen(Tempstr))
-	{
-		printf("\nAccess Code: "); fflush(NULL);
-
-		Tempstr=SkyDriveOAuthReadAuthorizationCode(Tempstr);
-		if (StrLen(Tempstr)) break;
-		printf("\nERROR: Couldn't extract oauth code. Paste entire URL from your browser.\n");
-	}
-
-	OAuthInstalledAppGetAccessToken("https://login.live.com/oauth20_token.srf", SKYDRIVE_CLIENT_ID, SKYDRIVE_CLIENT_SECRET, Tempstr, "https://login.live.com/oauth20_desktop.srf", &FS->Passwd, &RefreshToken);
-
-	SetVar(FS->Vars,"OAuthRefreshToken",RefreshToken);
-	printf("ACCESS:  %s\n",FS->Passwd);
-	printf("REFRESH: %s\n",RefreshToken);
-}
-
-FS->Settings |= FS_OAUTH;
-ConfigFileSaveFileStore(FS);
-
-DestroyString(RefreshToken);
-DestroyString(Tempstr);
-DestroyString(URL);
-
-return(TRUE);
-}
-
-
 int SkyDriveOpen(TFileStore *FS)
 {
 HTTPInfoStruct *Info;
@@ -447,18 +467,18 @@ if (! FS)
 return(FALSE);
 }
 
-if (! StrLen(FS->Passwd)) 
+if (! StrLen(FS->Passwd)) SkyDriveOAuth(FS);
+else
 {
-	SetVar(FS->Vars,"OAuthScope","wl.skydrive_update");
-	SkyDriveOAuth(FS);
+	Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);
+	FS->Passwd=CopyStr(FS->Passwd,Tempstr);
 }
 
-Tempstr=MCopyStr(Tempstr, "Bearer ", FS->Passwd, NULL);
-FS->Passwd=CopyStr(FS->Passwd,Tempstr);
+
 
 if (StrLen(Tempstr))
 {
-SetVar(FS->Vars,"AuthToken",Tempstr);
+//SetVar(FS->Vars,"AuthToken",Tempstr);
 result=TRUE;
 
 
