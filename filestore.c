@@ -1,7 +1,7 @@
 #include "filestore.h"
 
 
-char *FileStoreTypeStrings[]={"disk","ftp","rss","http","https","webdav","swebdav","idrive", "skydrive", "gdrive","gsites","picasa","faw","restbackup","ssh","shell","telnet","tty",NULL};
+char *FileStoreTypeStrings[]={"disk","ftp","rss","http","https","webdav","swebdav","idrive", "skydrive", "gdrive","gsites","picasa","faw","restbackup","ssh","shell","telnet","tty","pop3","pop3s",NULL};
 
 
 int DefaultReadBytes(TFileStore *FS, STREAM *S, char *Buffer, int MaxLen)
@@ -513,6 +513,7 @@ int FileStoreChDir(TFileStore *FS, char *Dir)
 char *Token=NULL, *ptr;
 char *OldDir=NULL;
 
+if (! FS->ChDir) return(FALSE);
 //if filestore supports going straight to a directory by full path, then
 //do so.
 if (FS->Flags & FS_CHDIR_FULLPATH) return(FileStoreInternalChDir(FS,Dir));
@@ -557,7 +558,7 @@ return(FS->ChMod(FS,FI,Mode));
 #define DIR_CACHE_RELOAD 1
 #define DIR_CACHE_IGNORE 2
 
-int FileStoreLoadDir(TFileStore *FS,char *PatternMatch,ListNode *Items, int Flags)
+int FileStoreLoadDir(TFileStore *FS, char *PatternMatch, ListNode *Items, int Flags)
 {
 int count=0, CacheFlags=DIR_CACHE_ACTIVE;
 ListNode *NewItems=NULL, *Patterns=NULL, *Curr;
@@ -634,7 +635,8 @@ while (Curr)
 		if (
 					(CacheFlags == DIR_CACHE_IGNORE) ||
 					((Flags & LIST_INCLUDE_DIRS) && (FI->Type==FTYPE_DIR)) ||
-					(fnmatch(PatternMatch,FI->Name,0)==0) 
+					(fnmatch(PatternMatch,FI->Name,0)==0) || 
+					(fnmatch(PatternMatch,FI->Path,0)==0) 
 					//(CheckMatchPatternList(Patterns, FI->Name))
 				)
 		{
@@ -814,6 +816,14 @@ switch (result)
 
 	case FS_FTP:
 		FS=FtpFileStoreCreate(Name,FSPath);
+	break; 
+
+	case FS_POP3:
+		FS=Pop3FileStoreCreate(Name,FSPath);
+	break; 
+
+	case FS_POP3S:
+		FS=Pop3SFileStoreCreate(Name,FSPath);
 	break; 
 
 	case FS_HTTP:

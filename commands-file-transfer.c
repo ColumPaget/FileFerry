@@ -723,14 +723,13 @@ if (Ctx->CmdFlags & FLAG_CMD_SYNC)
 {
 	DestItems=ListCreate();
 	DestItems->Flags |= LIST_FLAG_CASE;
-	FileStoreLoadDir(Ctx->DestFS,"*",DestItems, LIST_REFRESH | Ctx->CompareLevel);
-	FileStoreLoadDir(Ctx->SrcFS,Pattern,SrcItems, LIST_REFRESH | Ctx->CompareLevel);
+	FileStoreLoadDir(Ctx->DestFS, "*", DestItems, LIST_REFRESH | Ctx->CompareLevel);
+	FileStoreLoadDir(Ctx->SrcFS, Pattern, SrcItems, LIST_REFRESH | Ctx->CompareLevel);
 }
 else FileStoreLoadDir(Ctx->SrcFS,Pattern,SrcItems, LIST_REFRESH);
 
 
 Curr=ListGetNext(SrcItems);
-
 if (! Curr) result=FALSE;
 
 while (Curr)

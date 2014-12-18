@@ -2,54 +2,8 @@
 #include <fnmatch.h>
 
 #include "ftp.h"
+#include "simple-inet-protocols.h"
 
-#define FTP_CONTINUE 1
-#define FTP_OKAY 2
-#define FTP_MORE 4
-#define FTP_GOOD 7
-
-
-//FTP responses must start with a 3-letter digit. If we don't even get that (so there's silence) we
-//return FALSE here, and the app exits.
-int FtpReadResponse(STREAM *S, char **ResponseCode, char **Verbiage, int RequiredResponse)
-{
-char *Tempstr=NULL;
-int result=FALSE;
-
-Tempstr=STREAMReadLine(Tempstr,S);
-
-if (Settings.Flags & FLAG_VERBOSE) printf("%s\n",Tempstr);
-
-if (StrLen(Tempstr) > 3)
-{
-*ResponseCode=CopyStrLen(*ResponseCode,Tempstr,3);
-switch (**ResponseCode)
-{
-case '1': if (RequiredResponse & FTP_CONTINUE) result=TRUE; break;
-case '2': if (RequiredResponse & FTP_OKAY) result=TRUE; break;
-case '3': if (RequiredResponse & FTP_MORE) result=TRUE; break;
-break;
-}
-
-if (Verbiage) *Verbiage=CopyStr(*Verbiage,Tempstr+4);
-while ( (Tempstr[3]=='-') || (isspace(Tempstr[0])) )
-{
-	StripCRLF(Tempstr);
-
-	if (Verbiage) 
-	{
-		if (Tempstr[3]=='-') *Verbiage=MCatStr(*Verbiage,"\n",Tempstr+4,NULL);
-		else *Verbiage=MCatStr(*Verbiage,"\n",Tempstr,NULL);
-	}
-	Tempstr=STREAMReadLine(Tempstr,S);
-}
-}
-
-DestroyString(Tempstr);
-
-return(result);
-}
-        
   
 int DecodePORTStr(char *PortStr, char **Address, int *Port)
 {     
@@ -140,7 +94,7 @@ else
 }
 STREAMFlush(FS->S);
 
-if (FtpReadResponse(FS->S,&Tempstr,NULL, FTP_OKAY))
+if (InetReadResponse(FS->S,&Tempstr,NULL, INET_OKAY))
 {
 		DefaultChDir(FS,Dir);
 		result=TRUE;
@@ -162,7 +116,7 @@ Tempstr=FormatStr(Tempstr,"X%s '%s'\r\n",Type,Path);
 STREAMWriteLine(Tempstr,FS->S);
 STREAMFlush(FS->S);
 
-if (FtpReadResponse(FS->S,&Tempstr,Digest, FTP_OKAY))
+if (InetReadResponse(FS->S,&Tempstr,Digest, INET_OKAY))
 {
 	StripTrailingWhitespace(*Digest);
 	result=TRUE;
@@ -183,7 +137,7 @@ Tempstr=FormatStr(Tempstr,"SITE CHMOD %s '%s'\r\n",Mode,FI->Name);
 STREAMWriteLine(Tempstr,FS->S);
 STREAMFlush(FS->S);
 
-if (FtpReadResponse(FS->S,&Tempstr,NULL, FTP_OKAY)) result=TRUE;
+if (InetReadResponse(FS->S,&Tempstr,NULL, INET_OKAY)) result=TRUE;
 
 DestroyString(Tempstr);
 
@@ -201,7 +155,7 @@ Tempstr=FormatStr(Tempstr,"MKD %s\r\n",Dir);
 STREAMWriteLine(Tempstr,FS->S);
 STREAMFlush(FS->S);
 
-if (FtpReadResponse(FS->S,&Tempstr,NULL, FTP_OKAY)) result=TRUE;
+if (InetReadResponse(FS->S,&Tempstr,NULL, INET_OKAY)) result=TRUE;
 
 DestroyString(Tempstr);
 
@@ -218,7 +172,7 @@ Tempstr=MCopyStr(Tempstr,"SITE SYMLINK ",FromPath," ",ToPath,"\r\n",NULL);
 STREAMWriteLine(Tempstr,FS->S);
 STREAMFlush(FS->S);
 
-if (FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY))
+if (InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY))
 {
 	HandleEventMessage(Settings.Flags,"%s %s\n",Tempstr,Verbiage);
 	result=TRUE;
@@ -241,7 +195,7 @@ if (FI->Type==FTYPE_DIR) Tempstr=FormatStr(Tempstr,"RMD %s\r\n",FI->Path);
 else Tempstr=FormatStr(Tempstr,"DELE %s\r\n",FI->Path);
 STREAMWriteLine(Tempstr,FS->S);
 STREAMFlush(FS->S);
-if (FtpReadResponse(FS->S,&Tempstr,NULL, FTP_OKAY)) result=TRUE;
+if (InetReadResponse(FS->S,&Tempstr,NULL, INET_OKAY)) result=TRUE;
 
 DestroyString(Tempstr);
 
@@ -335,7 +289,7 @@ if (S)
 	if (MLSD) STREAMWriteLine("MLSD\r\n",FS->S);
 	else STREAMWriteLine("LIST\r\n",FS->S);
 	STREAMFlush(FS->S);
-	if (FtpReadResponse(FS->S,&Tempstr,NULL, FTP_CONTINUE))
+	if (InetReadResponse(FS->S,&Tempstr,NULL, INET_CONTINUE))
 	{
 	Tempstr=STREAMReadLine(Tempstr,S);
 	while (Tempstr)
@@ -359,7 +313,7 @@ if (S)
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
 		//Read 'End of transfer'
-	FtpReadResponse(FS->S,&Tempstr,NULL,FTP_OKAY);
+	InetReadResponse(FS->S,&Tempstr,NULL,INET_OKAY);
 	}
 
 STREAMClose(S);
@@ -394,7 +348,7 @@ if (S)
    			Tempstr=FormatStr(Tempstr,"REST %d\r\n",FI->ResumePoint);
    			STREAMWriteLine(Tempstr,FS->S);
 				printf("%s\n",Tempstr);
-				FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY);
+				InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY);
 				printf("REST %s\n",Tempstr);
 			}
    		Tempstr=FormatStr(Tempstr,"RETR %s\r\n",FI->Path);
@@ -403,7 +357,7 @@ if (S)
 	STREAMFlush(FS->S);
 }
 
-if (! FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_CONTINUE | FTP_OKAY))
+if (! InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_CONTINUE | INET_OKAY))
 {
 	Tempstr=MCatStr(Tempstr," ",Verbiage,NULL);
 	WriteLog(Tempstr);
@@ -449,7 +403,7 @@ char *Tempstr=NULL, *Verbiage=NULL;
 int RetVal=FALSE;
 
 STREAMClose(S);
-if (FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY)) RetVal=TRUE;
+if (InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY)) RetVal=TRUE;
 else switch(atoi(Tempstr))
 {
 case 452: RetVal=ERR_FULL; break;
@@ -474,7 +428,7 @@ char *Tempstr=NULL, *Verbiage=NULL, *Token=NULL, *FeatureList=NULL, *ptr;
 	STREAMWriteLine("FEAT\r\n",FS->S);
 	STREAMFlush(FS->S);
 
-	if (FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_GOOD))
+	if (InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_GOOD))
 	{
 	//First line will be 'Features follow' or something like that
 	ptr=GetToken(Verbiage,"\n",&Token,0);
@@ -541,7 +495,7 @@ TFileInfo *FI;
 Tempstr=MCopyStr(Tempstr,"RNFR ",FromPath,"\r\n",NULL);
 STREAMWriteLine(Tempstr,FS->S);
 STREAMFlush(FS->S);
-if (FtpReadResponse(FS->S,&Tempstr,NULL,FTP_OKAY|FTP_MORE))
+if (InetReadResponse(FS->S,&Tempstr,NULL,INET_OKAY|INET_MORE))
 {
 	ptr=strrchr(FromPath,'/');
 	if (ptr) ptr++;
@@ -572,7 +526,7 @@ if (FtpReadResponse(FS->S,&Tempstr,NULL,FTP_OKAY|FTP_MORE))
 	
 	STREAMWriteLine(Tempstr,FS->S);
 	STREAMFlush(FS->S);
-	if (FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY))
+	if (InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY))
 	{
 		HandleEventMessage(Settings.Flags,"%s %s\n",Tempstr,Verbiage);
 		result=TRUE;
@@ -602,7 +556,7 @@ int result=FALSE;
 	STREAMWriteLine(Tempstr,FS->S);
 	STREAMFlush(FS->S);
 
-	FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY | FTP_CONTINUE);
+	InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY | INET_CONTINUE);
 	if (strcmp(Tempstr,"230")==0)
 	{
 		LoginBanner=CatStr(LoginBanner,Verbiage);
@@ -616,7 +570,7 @@ int result=FALSE;
 			STREAMWriteLine(Tempstr,FS->S);
 			STREAMFlush(FS->S);
 
-			FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY);
+			InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY);
 			if (strcmp(Tempstr,"230")==0)
 			{
 					if (StrLen(Verbiage))
@@ -656,7 +610,7 @@ FS->S=STREAMCreate();
 if (STREAMConnectToHost(FS->S,FS->Host,FS->Port,0))
 {
 	STREAMSetTimeout(FS->S,30);
-	FtpReadResponse(FS->S,&Tempstr,&Verbiage, FTP_OKAY);
+	InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY);
 	if (StrLen(Verbiage) > 4) LoginBanner=CopyStr(LoginBanner,Verbiage);
 	//SetVar(FS->Vars,"Greeting",Verbiage);
 
@@ -691,7 +645,7 @@ else
 	//binary transfers
 	STREAMWriteLine("TYPE I\r\n",FS->S);
 	STREAMFlush(FS->S);
-	FtpReadResponse(FS->S,&Tempstr,NULL, FTP_OKAY);
+	InetReadResponse(FS->S,&Tempstr,NULL, INET_OKAY);
 
 	if (
 				(FS->Settings & FS_TRANSFER_TYPES) &&
@@ -703,7 +657,7 @@ else
 	else STREAMWriteLine("MODE S\r\n",FS->S);
 
 	STREAMFlush(FS->S);
-	FtpReadResponse(FS->S,&Tempstr,NULL, FTP_OKAY);
+	InetReadResponse(FS->S,&Tempstr,NULL, INET_OKAY);
 
 	if (StrLen(FS->InitDir))  FtpChDir(FS, FS->InitDir);
 	PrintConnectionDetails(FS,FS->S);
