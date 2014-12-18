@@ -404,7 +404,7 @@ int RetVal=FALSE;
 
 STREAMClose(S);
 if (InetReadResponse(FS->S,&Tempstr,&Verbiage, INET_OKAY)) RetVal=TRUE;
-else switch(atoi(Tempstr))
+else if (StrLen(Tempstr)) switch(atoi(Tempstr))
 {
 case 452: RetVal=ERR_FULL; break;
 case 530:
