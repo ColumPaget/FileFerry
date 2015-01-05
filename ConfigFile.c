@@ -6,7 +6,7 @@ TFileStore *ConfigFileReadFileStore(STREAM *S, char *Name)
 {
 char *Tempstr=NULL, *Token=NULL, *ptr;
 TFileStore *FS=NULL;
-char *Type=NULL, *Host=NULL, *Login=NULL, *Password=NULL, *RefreshToken=NULL;
+char *Type=NULL, *Host=NULL, *Port=NULL, *Login=NULL, *Password=NULL, *RefreshToken=NULL;
 int Flags=0;
 
 
@@ -23,6 +23,7 @@ while (ptr && isspace(*ptr)) ptr++;
 
 if (strcmp(Token,"Type")==0) Type=CopyStr(Type,ptr);
 if (strcmp(Token,"Host")==0) Host=CopyStr(Host,ptr);
+if (strcmp(Token,"Port")==0) Port=CopyStr(Port,ptr);
 if (strcmp(Token,"Login")==0) Login=CopyStr(Login,ptr);
 if (strcmp(Token,"Password")==0) Password=CopyStr(Password,ptr);
 if (strcmp(Token,"RefreshToken")==0) RefreshToken=CopyStr(RefreshToken,ptr);
@@ -33,8 +34,8 @@ Tempstr=STREAMReadLine(Tempstr,S);
 
 if (StrLen(Type) && StrLen(Host))
 {
-	if (StrLen(Login)) Tempstr=MCopyStr(Tempstr,Type,":",	Login,"@",Host,NULL);
-	else Tempstr=MCopyStr(Tempstr,Type,":",	Host,NULL);
+	if (StrLen(Login)) Tempstr=MCopyStr(Tempstr,Type,":",	Login,"@",Host,":",Port,NULL);
+	else Tempstr=MCopyStr(Tempstr,Type,":",	Host,":",Port,NULL);
 
 	if (StrLen(Password)) Tempstr=MCatStr(Tempstr," -password ",Password,NULL);
 
@@ -46,6 +47,7 @@ if (StrLen(Type) && StrLen(Host))
 
 DestroyString(Host);
 DestroyString(Type);
+DestroyString(Port);
 DestroyString(Login);
 DestroyString(Tempstr);
 DestroyString(Password);
